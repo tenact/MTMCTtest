@@ -147,22 +147,13 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
     # remove tracked point from buffer if object is lost
     for key in list(data_deque):
       if key not in identities:
-        data_deque.pop(key)
-        # hier werden alle keys entfernt, die nicht mehr im DeepSort detected wurden
-        #noch eine schleife und schauen, ob es eine neuen Track gibt, wenn das der Fall ist.
-        #hier exportieren und das image + Koordinaten nutzen, um ein Snapshot zu erstll
-
-  ##  for key in list(data_deque):
-    #    if key 
-
-
-
-        for i in  list (id_list):
+        data_deque.pop(key)# hier werden alle keys entfernt, die nicht mehr im DeepSort detected wurden
+        
+        for i in  list (id_list): # iterates over the list of all ever detected ids
             if(i not in id_list):
-                #creation of the snapshot and json file
+                #if new id, creation of the snapshot and json file, to compare with all snapshots, if its already exists
                 x1, y1, x2, y2 = [int(i) for i in box],
                 img2 = img.crop((x1, y1, x2, y2)) # Punkt 1(x,y) Punkt 2(x,y)
-               
                 try:
                     img2.save(i + "img.jpg")
                     print("Image saved successfully")
@@ -170,16 +161,12 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
                     print("Error saving image:", e)
 
                 reid = REID()
-                
-                #iterieren über die JSON-File und durchführung der Ähnlichkeit
-
                 file_path = "idsUndFeatures.txt"
 
                 # Read from the text file
                 with open('file.txt', 'r') as f:
                     data = f.readlines()
-                
-
+            
                 newID = identities[i]
 
                 # Loop over each line in the text file
@@ -341,22 +328,9 @@ class DetectionPredictor(BasePredictor):
             bbox_xyxy = outputs[:, :4]
             identities = outputs[:, -2]
             object_id = outputs[:, -1]
-            # anschließend werden die Bounding boxes, die Klasse und die ID ausgegeben
-            # hier dann einfach exportieren? - aber es werden immer alle Tracks ausgegeben. => dies extern speichern
-            # wird das schon bisschen in draw_boxes mit der dequeue gemacht?
-
             
             draw_boxes(im0, bbox_xyxy, self.model.names, object_id,identities)
-            # hier werden die Ergebnisse von Yolo übergeben?
-            #jedenfalls findet hier das Zählen der Objekte statt
-            #also kann ich hier auch den Export ansetzen
-
-            # for identities 
-
         return log_string
-
-
-
 
 @hydra.main(version_base=None, config_path=str(DEFAULT_CONFIG.parent), config_name=DEFAULT_CONFIG.name)
 def predict(cfg):
@@ -392,7 +366,6 @@ def predict(cfg):
     # Wait for all threads to finish
     for thread in threads:
         thread.join()
-
 
     """
     # Create processes to run the process_video function on each video file
