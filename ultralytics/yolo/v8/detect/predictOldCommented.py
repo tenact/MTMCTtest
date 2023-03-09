@@ -171,79 +171,89 @@ def get_direction(point1, point2):
 def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
     #cv2.line(img, line[0], line[1], (46,162,112), 3)
 
-
+    neue_liste = id_list
+    if not neue_liste:
+        neue_liste = identities
+   
 
     newID = 0
     addIdToJsonFile = True
 
     height, width, _ = img.shape
     # remove tracked point from buffer if object is lost
-    for key in list(data_deque):
+    for key in list(data_deque): # also bei jeder 
       if key not in identities:
         data_deque.pop(key)
         # hier werden alle keys entfernt, die nicht mehr im DeepSort detected wurden
         #noch eine schleife und schauen, ob es eine neuen Track gibt, wenn das der Fall ist.
-        #hier exportieren und das image + Koordinaten nutzen, um ein Snapshot zu erstll
-
-  ##  for key in list(data_deque):
-    #    if key 
 
 
+    bboxItem = bbox[0]
+    x1, y1, x2, y2 = [int(bboxItem[box]) for box in range(4)]
+    img2 = img.crop((12, 1, 2, 3)) # Punkt 1(x,y) Punkt 2(x,y)
+    
+    try:
+        img2.save(0 + "img.jpg")
+        print("Image saved successfully")
+    except Exception as e:
+        print("Error saving image:", e)
 
-        for i in  list (id_list):
-            if(i not in id_list):
-                #creation of the snapshot and json file
-                x1, y1, x2, y2 = [int(i) for i in box],
-                img2 = img.crop((x1, y1, x2, y2)) # Punkt 1(x,y) Punkt 2(x,y)
-               
-                try:
-                    img2.save(i + "img.jpg")
-                    print("Image saved successfully")
-                except Exception as e:
-                    print("Error saving image:", e)
+    for i in  list (identities):
+        if(i not in neue_liste):
 
-                reid = REID()
+            #creation of the snapshot and json file
+            bboxItem = bbox[i]
+            x1, y1, x2, y2 = [int(bbox_item[box]) for box in range(4)]
+            img2 = img.crop((x1, y1, x2, y2)) # Punkt 1(x,y) Punkt 2(x,y)
+            
+            try:
+                img2.save(i + "img.jpg")
+                print("Image saved successfully")
+            except Exception as e:
+                print("Error saving image:", e)
+
+            reid = REID()
+            
+            #iterieren über die JSON-File und durchführung der Ähnlichkeit
+
+            file_path = "idsUndFeatures.txt"
+
+            # Read from the text file
+            with open('file.txt', 'w+') as f:
+                data = f.readlines()
+            
+
+            newID = identities[i]
+
+            # Loop over each line in the text file
+            for line in data:
+                # Load the JSON data from the line
+                json_data = json.loads(line)
+
+                # Access the number and array from the JSON data
+                num = json_data['number']
+                arr = json_data['array']
+
+                # Do something with the number and array (for example, print them)
+                print('Number:', num)
+                print('Array:', arr)
+
+                if(reid.euclidian_distance(reid.extract_features(img), arr) > 0.7):
+                    print("Similarity: ", reid.euclidian_distance(reid.extract_features(img2), arr))
                 
-                #iterieren über die JSON-File und durchführung der Ähnlichkeit
+                addIdToJsonFile = False
+                newID = num
+                #update the ID
+                #and do not add the ID to the list
+                #end the loop
+                break
 
-                file_path = "idsUndFeatures.txt"
-
-                # Read from the text file
-                with open('file.txt', 'r') as f:
-                    data = f.readlines()
+            if(addIdToJsonFile):
                 
-
-                newID = identities[i]
-
-                # Loop over each line in the text file
-                for line in data:
-                    # Load the JSON data from the line
-                    json_data = json.loads(line)
-
-                    # Access the number and array from the JSON data
-                    num = json_data['number']
-                    arr = json_data['array']
-
-                    # Do something with the number and array (for example, print them)
-                    print('Number:', num)
-                    print('Array:', arr)
-
-                    if(reid.euclidian_distance(reid.extract_features(img), arr) > 0.7):
-                        print("Similarity: ", reid.euclidian_distance(reid.extract_features(img2), arr))
-                    
-                    addIdToJsonFile = False
-                    newID = num
-                    #update the ID
-                    #and do not add the ID to the list
-                    #end the loop
-                    break
-
-                if(addIdToJsonFile):
-                    
-                    # Save the modified JSON data to a new file
-                    with open('new_file.txt', 'a') as f: # before 'new_file.txt'
-                        # Write the JSON data to a new line in the file
-                        f.write(json.dumps({'number': identities[i], 'array':reid.extract_feature(img)}) + '\n')
+                # Save the modified JSON data to a new file
+                with open('new_file.txt', 'w+') as f: # before 'new_file.txt'
+                    # Write the JSON data to a new line in the file
+                    f.write(json.dumps({'number': identities[i], 'array':reid.extract_feature(img)}) + '\n')
 
 
 

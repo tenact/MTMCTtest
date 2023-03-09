@@ -1,21 +1,10 @@
 # Ultralytics YOLO 🚀, GPL-3.0 license
 
-import multiprocessing
-import os
-import sys
-import threading
-from pathlib import Path
-from omegaconf import OmegaConf
 import hydra
 import torch
 import argparse
-import argparse
 import time
 from pathlib import Path
-from PIL import Image
-from reid import REID
-import json
-
 
 import cv2
 import torch
@@ -33,10 +22,8 @@ from collections import deque
 import numpy as np
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
 data_deque = {}
-id_list = []
 
-deepsort = None # gibt nur einen DeepSort für alle Threads, das ist ein Problem
-
+deepsort = None
 
 def init_tracker():
     global deepsort
@@ -133,73 +120,16 @@ def UI_box(x, img, color=None, label=None, line_thickness=None):
 
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
-# draw boxes, and takes the id of the object
+
 
 def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
     #cv2.line(img, line[0], line[1], (46,162,112), 3)
-
-
-
-    newID = 0
-    addIdToJsonFile = True
 
     height, width, _ = img.shape
     # remove tracked point from buffer if object is lost
     for key in list(data_deque):
       if key not in identities:
-        data_deque.pop(key)# hier werden alle keys entfernt, die nicht mehr im DeepSort detected wurden
-        
-        for i in  list (id_list): # iterates over the list of all ever detected ids
-            if(i not in id_list):
-                #if new id, creation of the snapshot and json file, to compare with all snapshots, if its already exists
-                x1, y1, x2, y2 = [int(i) for i in box],
-                img2 = img.crop((x1, y1, x2, y2)) # Punkt 1(x,y) Punkt 2(x,y)
-                try:
-                    img2.save(i + "img.jpg")
-                    print("Image saved successfully")
-                except Exception as e:
-                    print("Error saving image:", e)
-
-                reid = REID()
-                file_path = "idsUndFeatures.txt"
-
-                # Read from the text file
-                with open('file.txt', 'w+') as f:
-                    data = f.readlines()
-            
-                newID = identities[i]
-
-                # Loop over each line in the text file
-                for line in data:
-                    # Load the JSON data from the line
-                    json_data = json.loads(line)
-
-                    # Access the number and array from the JSON data
-                    num = json_data['number']
-                    arr = json_data['array']
-
-                    # Do something with the number and array (for example, print them)
-                    print('Number:', num)
-                    print('Array:', arr)
-
-                    if(reid.euclidian_distance(reid.extract_features(img), arr) > 0.7):
-                        sys.stdout.write("Similarity: ", reid.euclidian_distance(reid.extract_features(img2), arr))
-                    
-                        addIdToJsonFile = False # ist das nicht falsch? - das muss doch eingerück sein?
-                        newID = num     # habe ich jetzt eingerückt und sollte das Problem lösen``
-                    #update the ID
-                    #and do not add the ID to the list
-                    #end the loop
-                    break
-
-                if(addIdToJsonFile):
-                    
-                    # Save the modified JSON data to a new file
-                    with open('new_file.txt', 'w+') as f: # before 'new_file.txt'
-                        # Write the JSON data to a new line in the file
-                        f.write(json.dumps({'number': identities[i], 'array':reid.extract_feature(img)}) + '\n')
-
-
+        data_deque.pop(key)
 
     for i, box in enumerate(bbox):
         x1, y1, x2, y2 = [int(i) for i in box]
@@ -207,36 +137,22 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
         x2 += offset[0]
         y1 += offset[1]
         y2 += offset[1]
-        
 
         # code to find center of bottom edge
         center = (int((x2+x1)/ 2), int((y2+y2)/2))
 
-        id = 0
         # get ID of object
-        if(addIdToJsonFile):
-            id = int(identities[i]) if identities is not None else 0
-        else:
-            id = newID
+        id = int(identities[i]) if identities is not None else 0
 
         # create new buffer for new object
         if id not in data_deque:  
           data_deque[id] = deque(maxlen= 64)
-          
-        if(addIdToJsonFile):
-            color = compute_color_for_labels(object_id[i]) # CHANGE Color to black, if its a REID
-        else:
-            color = (255,255,255)
-
+        color = compute_color_for_labels(object_id[i])
         obj_name = names[object_id[i]]
         label = '{}{:d}'.format("", id) + ":"+ '%s' % (obj_name)
 
         # add center to buffer
-        data_deque[id].appendleft(center) # der Punkt wird in den Buffer geschrieben??? Wie weiß DeepSort
-        # das es sich im nächsten Schritt um den selben Punkt handelt?
-        #also die ID, ich glaube das wird einfach am Anfang überprüft. Und DeepSort ist über die ID vergabe zuständig
-        #also ist meine Lösung nicht die optimale
-        
+        data_deque[id].appendleft(center)
         UI_box(box, img, label=label, color=color, line_thickness=2)
         # draw trail
         for i in range(1, len(data_deque[id])):
@@ -247,10 +163,6 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
             thickness = int(np.sqrt(64 / float(i + i)) * 1.5)
             # draw trails
             cv2.line(img, data_deque[id][i - 1], data_deque[id][i], color, thickness)
-    
-  
-    
-    
     return img
 
 
@@ -320,65 +232,26 @@ class DetectionPredictor(BasePredictor):
         xywhs = torch.Tensor(xywh_bboxs)
         confss = torch.Tensor(confs)
           
-        outputs = deepsort.update(xywhs, confss, oids, im0) 
-        # übergabe aller YOLO-Detections an Deepsort, conffs are the confidences of the detections
-        # oids is a list of the class IDs of the detected objects
-        # im0 the current frame of the video
-        if len(outputs) > 0: # if its greater than there are tracked objects, meaning that there are objects in the frame?
+        outputs = deepsort.update(xywhs, confss, oids, im0)
+        if len(outputs) > 0:
             bbox_xyxy = outputs[:, :4]
             identities = outputs[:, -2]
             object_id = outputs[:, -1]
             
             draw_boxes(im0, bbox_xyxy, self.model.names, object_id,identities)
+
         return log_string
+
 
 @hydra.main(version_base=None, config_path=str(DEFAULT_CONFIG.parent), config_name=DEFAULT_CONFIG.name)
 def predict(cfg):
     init_tracker()
     cfg.model = cfg.model or "yolov8n.pt"
     cfg.imgsz = check_imgsz(cfg.imgsz, min_dim=2)  # check image size
-    cfg.source = 'videos' # cfg.source if cfg.source is not None else ROOT / "assets"
-
-    # Load all videos in source directory
-    video_files = []
-    if os.path.isdir(cfg.source):
-        for file in os.listdir(cfg.source):
-            if file.endswith('.mp4') or file.endswith('.avi'):
-                video_files.append(os.path.join(cfg.source, file))
-    else:
-        video_files.append(cfg.source)
+    cfg.source = cfg.source if cfg.source is not None else ROOT / "assets"
+    predictor = DetectionPredictor(cfg)
+    predictor()
 
 
-    def process_video(video_path, cfg):
-        print(f"Processing video: {video_path}")
-        cfg.source = video_path
-        predictor = DetectionPredictor(cfg) # i changed this to video_path from cfg // but now exceptions in all threads
-        predictor()
-
-    # erstellung der 4 Threads anstatt der Iteration über die Videos
-    threads = []
-    for video_path in video_files:
-       # from video_processing import process_video
-        thread = threading.Thread(target=process_video, args=(video_path, cfg,))
-        threads.append(thread)
-        thread.start()
-
-    # Wait for all threads to finish
-    for thread in threads:
-        thread.join()
-
-    """
-    # Create processes to run the process_video function on each video file
-    processes = []
-    for video_path in video_files:
-        from video_processing import process_video
-        process = multiprocessing.Process(target=process_video, args=(video_path, cfg))
-        processes.append(process)
-        process.start()
-
-    # Wait for all processes to finish
-    for process in processes:
-        process.join()
-"""
 if __name__ == "__main__":
     predict()

@@ -1,14 +1,8 @@
 # Ultralytics YOLO 🚀, GPL-3.0 license
 
-import multiprocessing
 import os
-import sys
-import threading
-from pathlib import Path
-from omegaconf import OmegaConf
 import hydra
 import torch
-import argparse
 import argparse
 import time
 from pathlib import Path
@@ -35,7 +29,13 @@ palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
 data_deque = {}
 id_list = []
 
-deepsort = None # gibt nur einen DeepSort für alle Threads, das ist ein Problem
+deepsort = None
+
+object_counter = {}
+
+
+object_counter1 = {}
+
 
 
 def init_tracker():
@@ -133,75 +133,92 @@ def UI_box(x, img, color=None, label=None, line_thickness=None):
 
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
+
+def intersect(A,B,C,D):
+    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
+
+def ccw(A,B,C):
+    return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+
+
+
+def get_direction(point1, point2):
+
+    # zum Zählen, die Ausrichtung kann geändert werden. Wenn dann auch nur einmal zählen
+    direction_str = ""
+
+    # calculate y axis direction
+    if point1[1] > point2[1]:
+        direction_str += "South"
+    elif point1[1] < point2[1]:
+        direction_str += "North"
+    else:
+        direction_str += ""
+
+    # calculate x axis direction
+    if point1[0] > point2[0]:
+        direction_str += "East"
+    elif point1[0] < point2[0]:
+        direction_str += "West"
+    else:
+        direction_str += ""
+
+    return direction_str
+
 # draw boxes, and takes the id of the object
 
 def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
-    #cv2.line(img, line[0], line[1], (46,162,112), 3)
-
-
-
-    newID = 0
-    addIdToJsonFile = True
-
+    
     height, width, _ = img.shape
-    # remove tracked point from buffer if object is lost
+    file_path = "data_json2.txt"
+    #img.save((str(key) + "img.jpg"))
+    cv2.imwrite(str(1) + "img.jpg", img)
+    newID = 0
+    addIdToJsonFile = True 
+
+    print("draw_boxes wird gezeichnet") 
+
     for key in list(data_deque):
       if key not in identities:
-        data_deque.pop(key)# hier werden alle keys entfernt, die nicht mehr im DeepSort detected wurden
+        print("key not in identities deque" + str(key))
+        # aber ich habe die ganzen Infos nicht mehr
+        data_deque.pop(key)
+
+    # names anstatt identities nutzen??? irgendwo kommen ja die nummern her, die bei den Boxen stehen
+
+    #for key in list(identities): #immer 1, also checken, ob identiy noch nicht in der Liste ist
+        # wenn das der Fall ist, prüfen, ob ReId und sonst einfach drin lassen
+        # und beim poppen aus der deque, hinzufügen als JSON-File
         
-        for i in  list (id_list): # iterates over the list of all ever detected ids
-            if(i not in id_list):
-                #if new id, creation of the snapshot and json file, to compare with all snapshots, if its already exists
-                x1, y1, x2, y2 = [int(i) for i in box],
-                img2 = img.crop((x1, y1, x2, y2)) # Punkt 1(x,y) Punkt 2(x,y)
-                try:
-                    img2.save(i + "img.jpg")
-                    print("Image saved successfully")
-                except Exception as e:
-                    print("Error saving image:", e)
 
-                reid = REID()
-                file_path = "idsUndFeatures.txt"
+       # if(len(data_deque) < len(identities)):
+            # wenn die Liste 0 ist, alle identiies hinzufügen
+            #else wenn die liste kleiner als die Liste ist, neue ELemente hinzufügen
+            # aber wie?
+            # also cropped image zur JSON-File
+            #und auch prüfen, ob es bereits existiert, per ReID
+            # das heißt 
+            # ganzer code, einfach einrücken
 
-                # Read from the text file
-                with open('file.txt', 'w+') as f:
-                    data = f.readlines()
+
+
+        
+            # and add all the content of identities
+
+
+            # wir iterieren über alle objekte rüber (oftmals nur eins)
+
+
+            # wir bekommen die Daten des DeepSorts als Ergebnis
             
-                newID = identities[i]
-
-                # Loop over each line in the text file
-                for line in data:
-                    # Load the JSON data from the line
-                    json_data = json.loads(line)
-
-                    # Access the number and array from the JSON data
-                    num = json_data['number']
-                    arr = json_data['array']
-
-                    # Do something with the number and array (for example, print them)
-                    print('Number:', num)
-                    print('Array:', arr)
-
-                    if(reid.euclidian_distance(reid.extract_features(img), arr) > 0.7):
-                        sys.stdout.write("Similarity: ", reid.euclidian_distance(reid.extract_features(img2), arr))
-                    
-                        addIdToJsonFile = False # ist das nicht falsch? - das muss doch eingerück sein?
-                        newID = num     # habe ich jetzt eingerückt und sollte das Problem lösen``
-                    #update the ID
-                    #and do not add the ID to the list
-                    #end the loop
-                    break
-
-                if(addIdToJsonFile):
-                    
-                    # Save the modified JSON data to a new file
-                    with open('new_file.txt', 'w+') as f: # before 'new_file.txt'
-                        # Write the JSON data to a new line in the file
-                        f.write(json.dumps({'number': identities[i], 'array':reid.extract_feature(img)}) + '\n')
-
+            # schreiben der Ergebnisse in eine Datei
+            # dabei prüfen, ob diese Daten bereits existieren
+                #ReID und dann die Darstellung des Bounding Box ändern
 
 
     for i, box in enumerate(bbox):
+
+        print("wir sind in der Schleife")
         x1, y1, x2, y2 = [int(i) for i in box]
         x1 += offset[0]
         x2 += offset[0]
@@ -212,34 +229,162 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
         # code to find center of bottom edge
         center = (int((x2+x1)/ 2), int((y2+y2)/2))
 
-        id = 0
+        #id2 = 0
         # get ID of object
-        if(addIdToJsonFile):
-            id = int(identities[i]) if identities is not None else 0
-        else:
-            id = newID
+       # if(addIdToJsonFile):
+        #    id2 = int(identities[i]) if identities is not None else 0
+        #else:
+         #   id2 = newID
+
+         # get ID of object
+        id = int(identities[i]) if identities is not None else 0
 
         # create new buffer for new object
+
+
+        # hier Erstellubng des Snapshots und adden zu der JSON-File
+        # und auch hier prüfen, ob es sich um ein neues Element handelt.
+
+
         if id not in data_deque:  
-          data_deque[id] = deque(maxlen= 64)
+            data_deque[id] = deque(maxlen= 64)
           
+            #print("key: " + str(key)) # key = 1, warum nicht fucking 0?
+
+            #print("identities: " + str(len(identities)))
+            #print("id " + str(identities[key-1]))
+        
+            #box = bbox[key-1]
+            #x1, y1, x2, y2 = [int(i-1) for i in box]
+
+            point1 = (x1, y1)
+            point2 = (x2, y2)
+
+            # Calculate the sub-image dimensions
+            sub_image_width = point2[0] - point1[0]
+            sub_image_height = point2[1] - point1[1]
+
+            # Extract the sub-image using array indexing
+            sub_image = np.zeros((sub_image_height, sub_image_width, 3), dtype=np.uint8)
+            for y in range(sub_image_height):
+                for x in range(sub_image_width):
+                    sub_image[y, x] = img[point1[1]+y, point1[0]+x]
+
+            # Convert the numpy array back to PIL Image object
+            
+            cropped_image = Image.fromarray(sub_image)
+
+            print(cropped_image.getcolors())
+            print(not cropped_image)
+            # Save the cropped image
+            cropped_image.save(str(id) + "img.jpg")
+
+
+            reid = REID()
+
+            if os.path.isfile(file_path): 
+            # if the file exists, read its contents
+                with open(file_path, 'r') as f:
+                    #if os.path.getsize(file_path) != 0:
+                    
+                    contents = f.read()
+                    for line in contents.split('\n'):
+                        if not line.strip():
+                            continue  # skip empty lines
+                        data = json.loads(line)
+                        j = data['number']
+                        arr = np.array(data['array'])
+
+                        print(j)
+                        print(arr)
+
+                        # do the ReID
+                        #Iteration über die JSON-File und vergleich mit key
+                        # Loop over each line in the text file              
+                        # Access the number and array from the JSON data        
+                        # Do something with the number and array (for example, print them)
+                        #print('Number:', i)
+                        #print('Array:', arr)
+                        #print(identities[key-1])
+                        #print(len(id_list))
+                        print("die ID_ " + str(id))
+                        #print(identities[key-1] not in id_list)
+
+                        #if(identities[key-1] not in id_list): # 1 ist immer in der Liste
+                        
+                        #print(sub_image)
+                        feature_bild = reid.extract_features(sub_image)
+                        features_json = arr
+    
+                        euclidean_distance = reid.euclidian_distance(feature_bild, features_json)
+                        
+                        print("Similarity: ", reid.euclidian_distance(reid.extract_features(sub_image), arr))
+                        if(euclidean_distance > 0.7):
+                            print("Similarity: ", reid.euclidian_distance(reid.extract_features(sub_image), arr))
+                            addIdToJsonFile = False
+                            # ist immer wahr, deshabl wird nie was hinzugefügt                
+                            newID = j
+                            break
+                        
+                        print(newID)
+                        #update the ID
+                        #and do not add the ID to the list
+                        #end the loop
+
+                        # hier muss auch noch die schwarze box gezeichnet werden    
+                        
+
+                    if(addIdToJsonFile):
+                        
+                        # Save the modified JSON data to a new file
+                        with open(file_path, 'a') as f: # before 'new_file.txt'
+                            # Write the JSON data to a new line in the file
+                            arr = reid.extract_features(sub_image).tolist()
+                            f.write(json.dumps({'number': int(id), 'array': arr}) + '\n')
+                            print("neue JSON-File wurde der Text-File hinzugefügt")
+                            #id_list.append(int(id))
+
+        
+            else:
+            # if the file does not exist, create a new one
+                with open(file_path, 'w') as f:
+                    print("File created.")        
+                    new_data = {'number': int(id), 'array': reid.extract_features(sub_image).tolist()}
+                    f.write(json.dumps(new_data) + '\n')
+                    #id_list.append(int(identities[key-1]))
+                    #print(identities[key-1])
+                    #print("länge der Liste " + str(len(id_list)))
+
+              # wenn eine Wert in der dequeu nicht existiert, dann wird der hinzugefügt
+              # und wenn 64 Elemente überschritten werden, dann wird das erste Element gelöscht
+
+        color = (255,255,255) #white/ 
+        
         if(addIdToJsonFile):
             color = compute_color_for_labels(object_id[i]) # CHANGE Color to black, if its a REID
-        else:
-            color = (255,255,255)
+            
 
+        # ich ändere i?
         obj_name = names[object_id[i]]
         label = '{}{:d}'.format("", id) + ":"+ '%s' % (obj_name)
 
         # add center to buffer
-        data_deque[id].appendleft(center) # der Punkt wird in den Buffer geschrieben??? Wie weiß DeepSort
-        # das es sich im nächsten Schritt um den selben Punkt handelt?
+        data_deque[id].appendleft(center) 
+
+
+
+
         #also die ID, ich glaube das wird einfach am Anfang überprüft. Und DeepSort ist über die ID vergabe zuständig
         #also ist meine Lösung nicht die optimale
         
+        
+
         UI_box(box, img, label=label, color=color, line_thickness=2)
         # draw trail
         for i in range(1, len(data_deque[id])):
+
+            #print("UI box wird gezeichnet")
+
             # check if on buffer value is none
             if data_deque[id][i - 1] is None or data_deque[id][i] is None:
                 continue
@@ -247,9 +392,7 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
             thickness = int(np.sqrt(64 / float(i + i)) * 1.5)
             # draw trails
             cv2.line(img, data_deque[id][i - 1], data_deque[id][i], color, thickness)
-    
-  
-    
+
     
     return img
 
@@ -328,57 +471,41 @@ class DetectionPredictor(BasePredictor):
             bbox_xyxy = outputs[:, :4]
             identities = outputs[:, -2]
             object_id = outputs[:, -1]
+            # anschließend werden die Bounding boxes, die Klasse und die ID ausgegeben
+            # hier dann einfach exportieren? - aber es werden immer alle Tracks ausgegeben. => dies extern speichern
+            # wird das schon bisschen in draw_boxes mit der dequeue gemacht?
+
             
-            draw_boxes(im0, bbox_xyxy, self.model.names, object_id,identities)
+            draw_boxes(im0, bbox_xyxy, self.model.names, object_id,identities) 
+            # also, wenn es detections gibt, dann zeichnen wir es
+
+
+
+
+            # hier werden die Ergebnisse von Yolo übergeben?
+            #jedenfalls findet hier das Zählen der Objekte statt
+            #also kann ich hier auch den Export ansetzen
+
+            # for identities 
+
         return log_string
+
 
 @hydra.main(version_base=None, config_path=str(DEFAULT_CONFIG.parent), config_name=DEFAULT_CONFIG.name)
 def predict(cfg):
     init_tracker()
     cfg.model = cfg.model or "yolov8n.pt"
     cfg.imgsz = check_imgsz(cfg.imgsz, min_dim=2)  # check image size
-    cfg.source = 'videos' # cfg.source if cfg.source is not None else ROOT / "assets"
-
-    # Load all videos in source directory
-    video_files = []
-    if os.path.isdir(cfg.source):
-        for file in os.listdir(cfg.source):
-            if file.endswith('.mp4') or file.endswith('.avi'):
-                video_files.append(os.path.join(cfg.source, file))
-    else:
-        video_files.append(cfg.source)
+    cfg.source = cfg.source if cfg.source is not None else ROOT / "assets"
+    predictor = DetectionPredictor(cfg)
+    predictor()
 
 
-    def process_video(video_path, cfg):
-        print(f"Processing video: {video_path}")
-        cfg.source = video_path
-        predictor = DetectionPredictor(cfg) # i changed this to video_path from cfg // but now exceptions in all threads
-        predictor()
+    # if multiple videos
+    # erstellung von 4 Threads 
 
-    # erstellung der 4 Threads anstatt der Iteration über die Videos
-    threads = []
-    for video_path in video_files:
-       # from video_processing import process_video
-        thread = threading.Thread(target=process_video, args=(video_path, cfg,))
-        threads.append(thread)
-        thread.start()
 
-    # Wait for all threads to finish
-    for thread in threads:
-        thread.join()
-
-    """
-    # Create processes to run the process_video function on each video file
-    processes = []
-    for video_path in video_files:
-        from video_processing import process_video
-        process = multiprocessing.Process(target=process_video, args=(video_path, cfg))
-        processes.append(process)
-        process.start()
-
-    # Wait for all processes to finish
-    for process in processes:
-        process.join()
-"""
 if __name__ == "__main__":
     predict()
+
+

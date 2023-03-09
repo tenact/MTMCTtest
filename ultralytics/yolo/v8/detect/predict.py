@@ -207,8 +207,9 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
         label = '{}{:d}'.format("", id) + ":"+ '%s' % (obj_name)
 
         # add center to buffer
-        data_deque[id].appendleft(center) # der Punkt wird in den Buffer geschrieben??? Wie weiß DeepSort
-        # das es sich im nächsten Schritt um den selben Punkt handelt?
+        data_deque[id].appendleft(center) 
+
+        
         if len(data_deque[id]) >= 2:
           direction = get_direction(data_deque[id][0], data_deque[id][1])
           if intersect(data_deque[id][0], data_deque[id][1], line[0], line[1]):
