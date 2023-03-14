@@ -169,23 +169,21 @@ def get_direction(point1, point2):
 # draw boxes, and takes the id of the object
 
 def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
-    #cv2.line(img, line[0], line[1], (46,162,112), 3)
+    
 
-    neue_liste = id_list
-    if not neue_liste:
-        neue_liste = identities
-   
+    file_path = "data_json1.txt"
+    #img.save((str(key) + "img.jpg"))
+    cv2.imwrite(str(1) + "img.jpg", img)
 
     newID = 0
     addIdToJsonFile = True
+  
 
     height, width, _ = img.shape
-    # remove tracked point from buffer if object is lost
     for key in list(data_deque): # also bei jeder 
       if key not in identities:
         data_deque.pop(key)
-        # hier werden alle keys entfernt, die nicht mehr im DeepSort detected wurden
-        #noch eine schleife und schauen, ob es eine neuen Track gibt, wenn das der Fall ist.
+       
 
 
     bboxItem = bbox[0]

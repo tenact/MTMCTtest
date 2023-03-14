@@ -1,10 +1,10 @@
 DEEPSORT:
   REID_CKPT: "deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7" # das ist das Modell?
-  MAX_DIST: 0.2
-  MIN_CONFIDENCE: 0.3
+  MAX_DIST: 0.4 #davor 0.2
+  MIN_CONFIDENCE: 0.65 # vorher 0.2?
   NMS_MAX_OVERLAP: 0.5
   MAX_IOU_DISTANCE: 0.7
-  MAX_AGE: 10
+  MAX_AGE: 15 # davpr 10
   N_INIT: 3
-  NN_BUDGET: 100
+  NN_BUDGET: 100 
   

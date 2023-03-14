@@ -1,6 +1,7 @@
 # Ultralytics YOLO 🚀, GPL-3.0 license
 
 import os
+from sklearn.cluster import AgglomerativeClustering
 import hydra
 import torch
 import argparse
@@ -170,7 +171,7 @@ def get_direction(point1, point2):
 def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
     
     height, width, _ = img.shape
-    file_path = "data_json2.txt"
+    file_path = "data_json3.txt"
     #img.save((str(key) + "img.jpg"))
     cv2.imwrite(str(1) + "img.jpg", img)
     newID = 0
@@ -183,38 +184,6 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
         print("key not in identities deque" + str(key))
         # aber ich habe die ganzen Infos nicht mehr
         data_deque.pop(key)
-
-    # names anstatt identities nutzen??? irgendwo kommen ja die nummern her, die bei den Boxen stehen
-
-    #for key in list(identities): #immer 1, also checken, ob identiy noch nicht in der Liste ist
-        # wenn das der Fall ist, prüfen, ob ReId und sonst einfach drin lassen
-        # und beim poppen aus der deque, hinzufügen als JSON-File
-        
-
-       # if(len(data_deque) < len(identities)):
-            # wenn die Liste 0 ist, alle identiies hinzufügen
-            #else wenn die liste kleiner als die Liste ist, neue ELemente hinzufügen
-            # aber wie?
-            # also cropped image zur JSON-File
-            #und auch prüfen, ob es bereits existiert, per ReID
-            # das heißt 
-            # ganzer code, einfach einrücken
-
-
-
-        
-            # and add all the content of identities
-
-
-            # wir iterieren über alle objekte rüber (oftmals nur eins)
-
-
-            # wir bekommen die Daten des DeepSorts als Ergebnis
-            
-            # schreiben der Ergebnisse in eine Datei
-            # dabei prüfen, ob diese Daten bereits existieren
-                #ReID und dann die Darstellung des Bounding Box ändern
-
 
     for i, box in enumerate(bbox):
 
@@ -284,9 +253,7 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
             if os.path.isfile(file_path): 
             # if the file exists, read its contents
-                with open(file_path, 'r') as f:
-                    #if os.path.getsize(file_path) != 0:
-                    
+                with open(file_path, 'r') as f:                    
                     contents = f.read()
                     for line in contents.split('\n'):
                         if not line.strip():
@@ -295,45 +262,35 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
                         j = data['number']
                         arr = np.array(data['array'])
 
-                        print(j)
-                        print(arr)
-
-                        # do the ReID
-                        #Iteration über die JSON-File und vergleich mit key
-                        # Loop over each line in the text file              
-                        # Access the number and array from the JSON data        
-                        # Do something with the number and array (for example, print them)
-                        #print('Number:', i)
-                        #print('Array:', arr)
-                        #print(identities[key-1])
-                        #print(len(id_list))
-                        print("die ID_ " + str(id))
-                        #print(identities[key-1] not in id_list)
-
-                        #if(identities[key-1] not in id_list): # 1 ist immer in der Liste
-                        
-                        #print(sub_image)
                         feature_bild = reid.extract_features(sub_image)
                         features_json = arr
     
                         euclidean_distance = reid.euclidian_distance(feature_bild, features_json)
                         
+
+                        #implement Hierarchical Clustering
+
+                        # create once Hierarchical clustering, if non existent
+                        #iterate over all em
+                        
+
+                        n_clusters = 10
+                        model = AgglomerativeClustering(n_clusters=n_clusters)
+                        labels = model.fit_predict(feature_bild)
+
+                        feature_bild # ResNet50 Feature that we want to check 
+                        features_json # current ResNet50 Feature from the Iteration above the Json File
+
+
                         print("Similarity: ", reid.euclidian_distance(reid.extract_features(sub_image), arr))
                         if(euclidean_distance > 0.7):
                             print("Similarity: ", reid.euclidian_distance(reid.extract_features(sub_image), arr))
                             addIdToJsonFile = False
-                            # ist immer wahr, deshabl wird nie was hinzugefügt                
                             newID = j
                             break
                         
                         print(newID)
-                        #update the ID
-                        #and do not add the ID to the list
-                        #end the loop
-
-                        # hier muss auch noch die schwarze box gezeichnet werden    
                         
-
                     if(addIdToJsonFile):
                         
                         # Save the modified JSON data to a new file
@@ -341,8 +298,8 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
                             # Write the JSON data to a new line in the file
                             arr = reid.extract_features(sub_image).tolist()
                             f.write(json.dumps({'number': int(id), 'array': arr}) + '\n')
-                            print("neue JSON-File wurde der Text-File hinzugefügt")
-                            #id_list.append(int(id))
+                            print("neues JSON-Element wurde der Text-File hinzugefügt")
+                        
 
         
             else:
@@ -350,34 +307,19 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
                 with open(file_path, 'w') as f:
                     print("File created.")        
                     new_data = {'number': int(id), 'array': reid.extract_features(sub_image).tolist()}
-                    f.write(json.dumps(new_data) + '\n')
-                    #id_list.append(int(identities[key-1]))
-                    #print(identities[key-1])
-                    #print("länge der Liste " + str(len(id_list)))
+                    f.write(json.dumps(new_data) + '\n')            
 
-              # wenn eine Wert in der dequeu nicht existiert, dann wird der hinzugefügt
-              # und wenn 64 Elemente überschritten werden, dann wird das erste Element gelöscht
-
+              
         color = (255,255,255) #white/ 
         
         if(addIdToJsonFile):
-            color = compute_color_for_labels(object_id[i]) # CHANGE Color to black, if its a REID
+            color = compute_color_for_labels(object_id[i]) 
             
-
-        # ich ändere i?
         obj_name = names[object_id[i]]
         label = '{}{:d}'.format("", id) + ":"+ '%s' % (obj_name)
 
         # add center to buffer
         data_deque[id].appendleft(center) 
-
-
-
-
-        #also die ID, ich glaube das wird einfach am Anfang überprüft. Und DeepSort ist über die ID vergabe zuständig
-        #also ist meine Lösung nicht die optimale
-        
-        
 
         UI_box(box, img, label=label, color=color, line_thickness=2)
         # draw trail
