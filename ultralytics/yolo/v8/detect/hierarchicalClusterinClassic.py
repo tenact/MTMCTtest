@@ -258,7 +258,7 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
             https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8909837 
             
             '''
-
+            
             # wenn kein cluster da ist ein cluster erstellen
             feature_bild = reid.extract_features(sub_image, id)
 

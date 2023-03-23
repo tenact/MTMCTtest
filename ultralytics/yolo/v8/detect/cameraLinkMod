@@ -1,0 +1,104 @@
+
+import multiprocessing
+import os
+from sklearn.cluster import AgglomerativeClustering
+import hydra
+import torch
+import argparse
+import time
+from pathlib import Path
+from PIL import Image
+from reid import REID
+import json
+
+
+import cv2
+import torch
+import torch.backends.cudnn as cudnn
+from numpy import random
+from ultralytics.yolo.engine.predictor import BasePredictor
+from ultralytics.yolo.utils import DEFAULT_CONFIG, ROOT, ops
+from ultralytics.yolo.utils.checks import check_imgsz
+from ultralytics.yolo.utils.plotting import Annotator, colors, save_one_box
+
+import cv2
+from deep_sort_pytorch.utils.parser import get_config
+from deep_sort_pytorch.deep_sort import DeepSort
+from collections import deque
+import numpy as np
+
+
+class CameraLinkMod():
+
+    print("anythjing")
+
+
+    
+
+    @hydra.main(version_base=None, config_path=str(DEFAULT_CONFIG.parent), config_name=DEFAULT_CONFIG.name)
+
+
+    # Erstellung der Queues
+
+    # call der Funktionen mit 
+    # predictor = DetectionPredictor(cfg, EntryPoint, ExitPoint, EntryQueue, ExitQueue, DeepSort ) # Initailizioerung des Predictors
+    #            predictor()
+
+
+    def predict(cfg):
+        init_tracker()
+        cfg.model = cfg.model or "yolov8n.pt"
+        cfg.imgsz = check_imgsz(cfg.imgsz, min_dim=2)  # check image size
+        cfg.source = 'videos' # cfg.source if cfg.source is not None else ROOT / "assets"
+
+        # Load all videos in source directory
+        video_files = []
+        if os.path.isdir(cfg.source):
+            for file in os.listdir(cfg.source):
+                if file.endswith('.mp4') or file.endswith('.avi'):
+                    video_files.append(os.path.join(cfg.source, file))
+        else:
+            video_files.append(cfg.source)
+
+
+        def process_video(video_path, cfg):
+            print(f"Processing video: {video_path}")
+            cfg.source = video_path
+            predictor = DetectionPredictor(cfg) # Initailizioerung des Predictors
+            predictor()
+
+
+        # Create processes to run the process_video function on each video file
+        processes = []
+        for video_path in video_files:
+            from video_processing import process_video
+            process = multiprocessing.Process(target=process_video, args=(video_path, cfg))
+            processes.append(process)
+            process.start()
+
+        # Wait for all processes to finish
+        for process in processes:
+            process.join()
+
+
+
+    if __name__ == "__main__":
+        predict()
+
+
+
+
+
+    '''
+        # erstellung der 4 Threads anstatt der Iteration über die Videos
+        threads = []
+        for video_path in video_files:
+        # from video_processing import process_video
+            thread = threading.Thread(target=process_video, args=(video_path, cfg,))
+            threads.append(thread)
+            thread.start()
+
+        # Wait for all threads to finish
+        for thread in threads:
+            thread.join()
+    '''

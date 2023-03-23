@@ -10,6 +10,8 @@ from pathlib import Path
 from PIL import Image
 from reid import REID
 import json
+import matplotlib.patches as patches
+
 
 
 import cv2
@@ -146,7 +148,60 @@ def ccw(A,B,C):
 # draw boxes, and takes the id of the object
 
 def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
+    '''
+    #Exit Plain
+    v1 = 50 # x value
+    v2  =1230 #x value
+    f1  = 750   
+    f2 = 650
+
+      #Entry Plain
+    p1 = 50 # x value
+    p2 = 1230 #x value
+    q1 = 10 #y value
+    q2 = 150 #y value
+
+    #create Entry und Exit Plain
+
+
+    #Entry Plain
+    color = (255, 0, 0)  # blue
+    alpha = 0.5  # 50% transparency
+
+    img2 = img
+    mask = np.zeros_like(img2)
+    cv2.rectangle(mask, (v1, f2), (v2, f1), (255, 255, 255), -1)
+    # Apply the mask to the image
+    img = cv2.addWeighted(mask, alpha, img2, 1 - alpha, 0)
+
+
+    #Exit Plain
+    color = (0, 0, 255)  # red
+    alpha = 0.5  # 50% transparency
+
+    mask = np.zeros_like(img2)
+    cv2.rectangle(mask, (p1, q1), (p2, q2), (255, 255, 255), -1)
+    # Apply the mask to the image
+    img = cv2.addWeighted(mask, alpha, img2, 1 - alpha, 0)
+    cv2.imshow('Image with semi-transparent blue plane', img)
+
+    #img.save(str(id *0.0111) + "img.jpg")
+
     
+    p1 = 50 # x value
+    p2 = 1230 #x value
+    q1 = 10 #y value
+    q2 = 300 #y value
+
+    # Exit Plain
+    v1 = 50 # x value
+    v2 = 1230 #x value
+    f1 = 310  
+    f2 = 710
+    '''
+
+
+
     height, width, _ = img.shape  
     neuId = 0
     addIdToJsonFile = True 
@@ -161,7 +216,6 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
     for i, box in enumerate(bbox):
 
-        print("wir sind in der Schleife")
         x1, y1, x2, y2 = [int(i) for i in box]
         x1 += offset[0]
         x2 += offset[0]
@@ -177,6 +231,11 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
         if id not in data_deque:  
             data_deque[id] = deque(maxlen= 256)
+            print("neue Detection")
+            
+
+          
+                
 
             point1 = (x1, y1)
             point2 = (x2, y2)
@@ -236,6 +295,25 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
                 continue           
             cv2.line(img, data_deque[id][i - 1], data_deque[id][i], color) #, thickness
 
+
+        '''
+        #image = img
+        overlay = img.copy()
+        cv2.rectangle(overlay, (p1, q1), (p1+(p2-p1), q1+(q2-q1)), (0, 0, 255, 128), -1)
+        cv2.rectangle(overlay, (v1, f1), (v1+(v2-v1), f1+(f2-f1)), (0, 0, 255, 128), -1)
+
+        alpha = 0.5
+        img = cv2.addWeighted(overlay, alpha, img, 1-alpha, 0)
+
+        print("x1: " + str(x1))
+        print("x2: " + str(x2))
+        print("y1: " + str(y1))
+        print("y2: " + str(y2))
+        '''
+
+    #cv2.imshow('image', img)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
     
     return img
 

@@ -61,7 +61,7 @@ class BasePredictor:
         data_path (str): Path to data.
     """
 
-    def __init__(self, config=DEFAULT_CONFIG, overrides=None):
+    def __init__(self, config=DEFAULT_CONFIG,  overrides=None):
         """
         Initializes the BasePredictor class.
 
@@ -69,8 +69,10 @@ class BasePredictor:
             config (str, optional): Path to a configuration file. Defaults to DEFAULT_CONFIG.
             overrides (dict, optional): Configuration overrides. Defaults to None.
         """
-        if overrides is None:
-            overrides = {}
+       # abc = 2
+
+        #if overrides is None:
+        overrides = {} # nach vorne geschoben
         self.args = get_config(config, overrides)
         project = self.args.project or Path(SETTINGS['runs_dir']) / self.args.task
         name = self.args.name or f"{self.args.mode}"

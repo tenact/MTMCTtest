@@ -23,6 +23,9 @@ class DeepSort(object):
         self.tracker = Tracker(
             metric, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
+    def draw_boxes(self, img, bbox, names,object_id, dict, identities=None, offset=(0, 0)):
+        print("ndad")
+
     def update(self, bbox_xywh, confidences, oids, ori_img):
         self.height, self.width = ori_img.shape[:2]
         # generate detections
@@ -50,6 +53,7 @@ class DeepSort(object):
             outputs.append(np.array([x1, y1, x2, y2, track_id, track_oid], dtype=np.int))
         if len(outputs) > 0:
             outputs = np.stack(outputs, axis=0)
+            print("outputs", outputs)
         return outputs
 
     """
