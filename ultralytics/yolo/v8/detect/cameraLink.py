@@ -93,21 +93,7 @@ def xyxy_to_tlwh(bbox_xyxy):
         tlwh_bboxs.append(tlwh_obj)
     return tlwh_bboxs
 
-def compute_color_for_labels(label):
-    """
-    Simple function that adds fixed color depending on the class
-    """
-    if label == 0: #person
-        color = (85,45,255)
-    elif label == 2: # Car
-        color = (222,82,175)
-    elif label == 3:  # Motobike
-        color = (0, 204, 255)
-    elif label == 5:  # Bus
-        color = (0, 149, 255)
-    else:
-        color = [int((p * (label ** 2 - label + 1)) % 255) for p in palette]
-    return tuple(color)
+
 
 
 
@@ -116,7 +102,8 @@ class DetectionPredictor(BasePredictor):
 
     infos2 = {}
     deepsort = None
-    c = None
+    deepObject = None
+    data_queue = None
     def __init__(self, config=DEFAULT_CONFIG, overrides=None, infos={}): # zusätzliche Übergabe des Dictionaries
         """
         Initializes the BasePredictor class.
@@ -129,12 +116,13 @@ class DetectionPredictor(BasePredictor):
         print("im dectectoi predictior")
         super().__init__(config, overrides)
         print("die Results werden geschrieben")
-        b = Neudas()
-        b.init_tracker()
+        global deepObject
+        deepObject = Neudas()
+        deepObject.init_tracker()
         global deepsort
-        global c
-        c = b
-        deepsort = b.getDeepSort()
+        global data_queue
+        data_queue = deepObject.getData_deque()
+        deepsort = deepObject.getDeepSort()
         
         #self.infos2 = infos
         print(infos)
@@ -170,7 +158,7 @@ class DetectionPredictor(BasePredictor):
         
 
         print("is deepsort None? " + str(deepsort is None))
-        print("deepSort: " + str(deepsort))
+        #print("deepSort: " + str(deepsort))
         
         p, im, im0 = batch
         all_outputs = []
@@ -214,14 +202,14 @@ class DetectionPredictor(BasePredictor):
         xywhs = torch.Tensor(xywh_bboxs)
         confss = torch.Tensor(confs)
 
-      
         #printen der yolo-Werte, die an DeepSort übergeben werden
+        '''
         print("xywhs: " + str(xywhs))
         print("confss: " + str(confss))
         print("oids: " + str(oids))
         print("im0: " + str(im0))  
+        '''
         outputs = deepsort.update(xywhs, confss, oids, im0) 
-        
         
         print("outputs: " + str(outputs))
 
@@ -233,10 +221,10 @@ class DetectionPredictor(BasePredictor):
             bbox_xyxy = outputs[:, :4]
             identities = outputs[:, -2]
             object_id = outputs[:, -1]      
-            print("identities: " + str(identities))
-            print("object_id: " + str(object_id))  
-            print(c)
-            c.draw_boxes(im0, bbox_xyxy, self.model.names, object_id,identities)
+            #print("identities: " + str(identities))
+            #print("object_id: " + str(object_id))  
+            #print(deepObject)
+            deepObject.draw_boxes(im0, bbox_xyxy, self.model.names, object_id, identities)
 
             '''
             print( "das dict: " + str(self.infos[0]))
@@ -248,6 +236,8 @@ class DetectionPredictor(BasePredictor):
    
             '''
         return log_string
+    
+
 lock = multiprocessing.Lock()
 
 

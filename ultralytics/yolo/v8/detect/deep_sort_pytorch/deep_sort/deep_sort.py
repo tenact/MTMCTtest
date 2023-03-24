@@ -23,8 +23,21 @@ class DeepSort(object):
         self.tracker = Tracker(
             metric, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
-    def draw_boxes(self, img, bbox, names,object_id, dict, identities=None, offset=(0, 0)):
-        print("ndad")
+    #def draw_boxes(self, img, bbox, names,object_id, dict, identities=None, offset=(0, 0)):
+     #   print("ndad")
+
+
+
+     # wenn ich eine ReID feststelle in drawBoxes, muss ich es auch im DeepSort updaten.
+     #sodass es nicht nur einmal dargestellt wird, sondern die ganze Zeit.
+     #ich kann auch einen ExtraParameter erstellen, der jeder in data_deque hat.
+     #und wenn der auf True gesetzt, handelt es sich um eine ReID.
+     # und es wird gespeichert (Positionsdaten) und 
+     #dann müsste ich nichts am DeepSort direkt ändern, sondern nur in drawBoxes.
+     # das macht glaube ich auch mehr Sinn. Dann bleiben die beiden Entitäten getrennt.
+        # aber wie kann ich das denn Darstellen?- 
+        # ich muss also immer überprüfen, ob dieser Wert (der ReID) true ist, und es dann anders zeichne
+        # nicht nur einmal, sondern immer.
 
     def update(self, bbox_xywh, confidences, oids, ori_img):
         self.height, self.width = ori_img.shape[:2]

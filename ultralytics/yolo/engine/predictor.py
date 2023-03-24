@@ -26,10 +26,10 @@ Usage - formats:
                                     yolov8n_paddle_model       # PaddlePaddle
     """
 import platform
+import torch
+import cv2
 from collections import defaultdict
 from pathlib import Path
-
-import cv2
 
 from ultralytics.nn.autobackend import AutoBackend
 from ultralytics.yolo.configs import get_config
@@ -69,7 +69,6 @@ class BasePredictor:
             config (str, optional): Path to a configuration file. Defaults to DEFAULT_CONFIG.
             overrides (dict, optional): Configuration overrides. Defaults to None.
         """
-       # abc = 2
 
         #if overrides is None:
         overrides = {} # nach vorne geschoben
@@ -117,7 +116,7 @@ class BasePredictor:
             source = check_file(source)  # download
 
         # model
-        device = select_device(self.args.device)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #select_device(self.args.device)
         model = model or self.args.model
         self.args.half &= device.type != 'cpu'  # half precision only supported on CUDA
         model = AutoBackend(model, device=device, dnn=self.args.dnn, fp16=self.args.half)

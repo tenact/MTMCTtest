@@ -147,7 +147,7 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
     for key in list(data_deque):
       if key not in identities:
-        print("key not in identities deque" + str(key))
+        #print("key not in identities deque" + str(key))
         # aber ich habe die ganzen Infos nicht mehr
         data_deque.pop(key)
 
@@ -165,6 +165,7 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
     
          # get ID of object
         id = int(identities[i]) if identities is not None else 0
+        globalID = 0
 
         if id not in data_deque:  
             data_deque[id] = deque(maxlen= 256)
@@ -190,41 +191,74 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
            #feature_bild = siftFeatures.getFeatures(img)
             
-            print(features_dict)
+           # print(features_dict)
             print("Länge der Featutes: " + str(len(features_dict)))
 
 
             if len(features_dict) == 0:
-                features_dict[0] = sub_image
+                features_dict[1] = (sub_image, 0, id) # global ID is DEFAULT ZERO
+                                                        # id dort speichern ist am Einfcahsten
                 #features_dict = {'id': id, 'feature': sub_image}
 
             else:
                 for fe, arr in features_dict.items():
-                    dist = siftFeatures.structural_sim(arr, sub_image)
+                    dist = siftFeatures.structural_sim(arr[0], sub_image)
                     print(dist)
-                    if dist > 0.85:
+                    if dist > 0.9:
                         
-                        neuId = fe
-                        addIdToJsonFile = False
+                        #neuId = fe 
+                        globalID = arr[2]
+                        print("globaleID DIE hinzugefügt wird: " + str(id))
+
+                        for fe, arr in features_dict.items():
+                            if id == arr[2]:
+                                features_dict[arr[2]] = (sub_image, globalID, id)
+                        # überschreibe ich hier immer alles?
                         break
 
                         # besser wäre es, wenn der Track im DeepSort geändert wird.
                         # Also die ID ausgetauscht wird. Eine Update Methode dafür hinzufügen?
                 else:
-                    features_dict[id] = sub_image
+                    features_dict[id] = (sub_image, 0, id)
                     #features_dict = {'id': id, 'feature': sub_image}
 
 
-        if not addIdToJsonFile:
-            id = neuId  
+        #if not addIdToJsonFile:
+         #   id = neuId  
              
         color = (0,0,0) #black/ 
-        
-        if(addIdToJsonFile):
-            color = compute_color_for_labels(object_id[i]) 
+        '''
+        for fe, arr in features_dict.items():
+            print("ID: " + str(fe) + " Feature: " )
+        print("die momentane id ist: " + str(id))
+           '''     
+
+
+        # hier darüber iterei unch checken, wann die globale ID = globaleID
+        # nein ich habe eine ID und ich suche den Wert der diese ID hat, und dann lese ich die globale ID aus
+
+        lokaleID = id
+        if addIdToJsonFile == True:
+
+            for fe, arr in features_dict.items():
+                print("id von arr:" + str(arr[2]))
+                if lokaleID == arr[2]:
+                    
+                    globalID = arr[1]
+                    print("es gibt einen match: " + str(globalID))
+                    
+                    
+
+                    if(globalID == 0):
+                        color = compute_color_for_labels(object_id[i]) 
+                    #print("globaleID DIE hinzugefügt wird: " + str(globalID))
+
+            
+
+            
             
         obj_name = names[object_id[i]]
-        label = '{}{:d}'.format("", id) + ":"+ '%s' % (obj_name)
+        label = '{}{:d}'.format("", lokaleID if globalID == 0 else globalID) + ":"+ '%s' % (obj_name)
 
         # add center to buffer
         if addIdToJsonFile:
