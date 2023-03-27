@@ -69,7 +69,7 @@ class BasePredictor:
             config (str, optional): Path to a configuration file. Defaults to DEFAULT_CONFIG.
             overrides (dict, optional): Configuration overrides. Defaults to None.
         """
-
+        
         #if overrides is None:
         overrides = {} # nach vorne geschoben
         self.args = get_config(config, overrides)

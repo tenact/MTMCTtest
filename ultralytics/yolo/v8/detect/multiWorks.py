@@ -32,6 +32,7 @@ palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
 #data_deque = {}
 id_list = []
 features = []
+dicti = {}
 #features_dict = {}
 test = True
 basic_infos = {}
@@ -49,8 +50,6 @@ queue1 = []
 queue2 = []
 queue3 = []
 queue4 = []
-
-dictionary_alleIDs = {}
 
 #deepsort = None
 
@@ -100,14 +99,11 @@ def xyxy_to_tlwh(bbox_xyxy):
 
 class DetectionPredictor(BasePredictor):
 
-    infos = None
+    infos2 = {}
     deepsort = None
     deepObject = None
     data_queue = None
-
-        
-
-    def __init__(self, config=DEFAULT_CONFIG, overrides=None, dicionary=None, counter=None): # zusätzliche Übergabe des Dictionaries
+    def __init__(self, config=DEFAULT_CONFIG, overrides=None, infos={}): # zusätzliche Übergabe des Dictionaries
         """
         Initializes the BasePredictor class.
 
@@ -116,8 +112,9 @@ class DetectionPredictor(BasePredictor):
             overrides (dict, optional): Configuration overrides. Defaults to None.
             queues (dict, optional): A dictionary of queues. Defaults to an empty dictionary.
         """
-
+        print("im dectectoi predictior")
         super().__init__(config, overrides)
+        print("die Results werden geschrieben")
         global deepObject
         deepObject = Neudas()
         deepObject.init_tracker()
@@ -126,15 +123,8 @@ class DetectionPredictor(BasePredictor):
         data_queue = deepObject.getData_deque()
         deepsort = deepObject.getDeepSort()
         
-        #übergabe des Dictionary, sodass Werte in drawBoxes genutzt werden können.
-        
-
-        global infos
-       # print("daas dicionary: " + str(dicionary))
-        #print("das counter: " + str(counter))
-        infos = dicionary[counter][counter]
-
-        #print(di)
+        #self.infos2 = infos
+        print(infos)
 
         # ich muss eine Dequeu übergeben, aber nicht bei drawboxes, dann würde ich immer die selbe übergeben
         # Definieren hier einer drawbox, und üvergabe an drawboxes?
@@ -166,7 +156,7 @@ class DetectionPredictor(BasePredictor):
 
         
 
-        #print("is deepsort None? " + str(deepsort is None))
+        print("is deepsort None? " + str(deepsort is None))
         #print("deepSort: " + str(deepsort))
         
         p, im, im0 = batch
@@ -202,7 +192,7 @@ class DetectionPredictor(BasePredictor):
         oids = []
         outputs = []
         for *xyxy, conf, cls in reversed(det):
-            #print("hier wird gezeichnet")
+            print("hier wird gezeichnet")
             x_c, y_c, bbox_w, bbox_h = xyxy_to_xywh(*xyxy)
             xywh_obj = [x_c, y_c, bbox_w, bbox_h]
             xywh_bboxs.append(xywh_obj)
@@ -220,7 +210,7 @@ class DetectionPredictor(BasePredictor):
         '''
         outputs = deepsort.update(xywhs, confss, oids, im0) 
         
-        #print("outputs: " + str(outputs))
+        print("outputs: " + str(outputs))
 
         # outputs bleiben immmer leer, also muss da irgendwie ein Problem bei DeepSort sein
         # DeppSort Initalisiert, und die Infos werden übergeben?
@@ -233,11 +223,7 @@ class DetectionPredictor(BasePredictor):
             #print("identities: " + str(identities))
             #print("object_id: " + str(object_id))  
             #print(deepObject)
-            #print("die liste: " + str(infos[counter]["list"]))
-
-
-            #hier nur das spezielle Objekt übergeben, Kamera 1  = 1 , Kamera 2 = 2, Zugriff über counter.
-            deepObject.draw_boxes(im0, bbox_xyxy, self.model.names, object_id, infos, identities)
+            deepObject.draw_boxes(im0, bbox_xyxy, self.model.names, object_id, identities)
 
             '''
             print( "das dict: " + str(self.infos[0]))
@@ -254,18 +240,20 @@ class DetectionPredictor(BasePredictor):
 lock = multiprocessing.Lock()
 
 
-def process_video(video_path, cfg, counter, dictionary):
+def process_video(video_path, cfg, counter, dicti):
         
         with lock:
-    
+           
+            
+
             print(f"Processing video: {video_path}")
             cfg.source = video_path
             #deepSort_tmp = init_tracker()
             print("Initalisierung des Predictors")
             if counter == 1:
-                predictor = DetectionPredictor(cfg, counter=counter, dicionary=dictionary)
+                predictor = DetectionPredictor(cfg, dicti)
             else:
-                predictor = DetectionPredictor(cfg, counter=counter, dicionary=dictionary) # Initailizioerung des Predictors
+                predictor = DetectionPredictor(cfg, dicti) # Initailizioerung des Predictors
             predictor()
             pass
 
@@ -285,8 +273,6 @@ def predict(cfg):
         video_files.append(cfg.source)
 
     counter = 0
-    manager = multiprocessing.Manager()
-    shared_dict = manager.dict()
     for video_path in video_files:
         
         counter += 1
@@ -298,32 +284,31 @@ def predict(cfg):
         p1 = 50 # x value
         p2 = 1230 #x value
         q1 = 10 #y value
-        q2 = 340 #y value
+        q2 = 150 #y value
 
         #Exit Plain
         v1 = 50 # x value
         v2  =1230 #x value
-        f1  = 730   
-        f2 = 330
-        
-        
+        f1  = 750   
+        f2 = 650
 
         entryQ = list(deque())
         exitQ = list(deque())
         
+        #dicti = {}
         dicti2 = {}
-        dicti = {}
         entryPLain = (p1,p2,q1,q2)
         exitPlain = (v1,v2,f1,f2)
 
         #hinzufügen der ganzen Paramter, für das Camera Link-Model
+        #kopieren des ganzen MultipProcessings für die erste Version
 
         if counter == 1:
-            dicti[1] = {1: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict}}
+            dicti[0] = {0: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ}}
         elif counter == 2:
-            dicti2[2] = {2: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict}}
+            dicti2[2] = {1: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ}}
         else:
-            dicti[counter] ={counter: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict}}
+            dicti[counter] ={counter: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ}}
 
         #übergabe 
         if counter ==1:

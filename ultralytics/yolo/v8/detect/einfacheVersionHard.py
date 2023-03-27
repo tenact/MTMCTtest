@@ -204,13 +204,13 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
                 for fe, arr in features_dict.items():
                     dist = siftFeatures.structural_sim(arr[0], sub_image)
                     print(dist)
-                    if dist > 0.9:
+                    if dist > 0.9:  
                         
                         #neuId = fe 
                         globalID = arr[2]
                         print("globaleID DIE hinzugefügt wird: " + str(id))
 
-                        for fe, arr in features_dict.items():
+                        for fe, arr in features_dict.copy().items():
                             if id == arr[2]:
                                 features_dict[arr[2]] = (sub_image, globalID, id)
                         # überschreibe ich hier immer alles?

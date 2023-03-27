@@ -1,8 +1,9 @@
 # Ultralytics YOLO 🚀, GPL-3.0 license
 
-import multiprocessing
+import multiprocessing as mp
 import os
 import queue
+
 from sklearn.cluster import AgglomerativeClustering
 import hydra
 import torch
@@ -138,214 +139,200 @@ class Neudas():
 
     # draw boxes, and takes the id of the object
 
-    def draw_boxes(self, img, bbox, names,object_id, identities=None,  offset=(0, 0) ):
+    def draw_boxes(self, img, bbox, names,object_id, dict, identities=None,  offset=(0, 0) ):
 
-        #Entry und Exit-Plain 
-        '''
-        p1,p2,q1,q2 = dict["entryPlain"] 
-        v1,v2,f1,f2 = dict["ExitPlain"] 
-        entryQueue = dict["entryQueue"]
-        exitQueue = dict["exitQueue"]
+        self.lock = mp.Lock()
+        with self.lock:
 
-        color = (255, 0, 0)  # blue
-        alpha = 0.5  # 50% transparency
-
-        mask = np.zeros_like(img)
-        cv2.rectangle(mask, (x1, y1), (x2, y2), (255, 255, 255), -1)
-        # Apply the mask to the image
-        img = cv2.addWeighted(mask, alpha, img, 1 - alpha, 0)
-
-
-        #Exit Plain
-        color = (0, 0, 255)  # red
-        alpha = 0.5  # 50% transparency
-
-        mask = np.zeros_like(img)
-        cv2.rectangle(mask, (x1, y1), (x2, y2), (255, 255, 255), -1)
-        # Apply the mask to the image
-        img = cv2.addWeighted(mask, alpha, img, 1 - alpha, 0)
-        '''  
-        internalQueue = []
-        entryQueue = []
-        exitQueue = []
-        
-        height, width, _ = img.shape  
-        neuId = 0
-        addIdToJsonFile = True 
-
-        print("draw_boxes wird gezeichnet") 
-        print("identities: " + str(identities))
-        print("object_id: " + str(object_id))
-        
-
-
-        print("Die Länge der data: queue " + str(len(data_deque)))
-        #print(hex(id)(data_deque))
-
-        for key in list(data_deque):
-            if key not in identities:
-                print("key not in identities deque" + str(key))
-                # aber ich habe die ganzen Infos nicht mehr
-                '''
-                if x1 >= v1 and x2 <= v2 and y1 >= f1 and y2 <= f2: 
-                    print("key insides Exit-Zone and can be removed")
-
-                # DAS MACHT ÜBERHAUPT KEINEN SINN, DA ES JA KEINE DETECTOIN GIBT
-                # ALSO WÄRE DAS NIEMALS WAHR
-
-                #ICH MUSS DAS ENTWEDER ZULASSEN
-                #ODER EINE NEUE LÖSUNG FINDEN,
-                #WENN YOLO GUT GENUG IST, SOLLTE ES IMMMER DIE OBJEKTE IN DER EXIT-ZONE ENTDECKEN UND ES SOLLTE
-                #JEDE IDENTITÄ GEPOPT WERDEN.
-
-                #TODO:  ALSO DAS poppen hier entfernen und in der ExitZone hinzufügen.
-
-                # hier das mit der ExitQueue und InternalQueue machen
-                #nur dann ist es möglich, dass ein Objekt entfernt wird.
-                    data_deque.pop(key)
-                    exitQueue.append(key)
-                
-                '''
-        for i, box in enumerate(bbox):
-
-            print("wir sind in der Schleife")
-            x1, y1, x2, y2 = [int(i) for i in box]
-            x1 += offset[0]
-            x2 += offset[0]
-            y1 += offset[1]
-            y2 += offset[1]
+            #Entry und Exit-Plain 
             
-
-            # code to find center of bottom edge
-            center = (int((x2+x1)/ 2), int((y2+y2)/2))
-        
-            # get ID of object
-            id = int(identities[i]) if identities is not None else 0
-
-            # checks if its a new ID
-            if id not in data_deque:  
-
-                # DEFINITION der Entry und Exit Points und erst dann neue Elemente hinzufügen
-                #übergabe von zwei Punkten
-
-                #entryPoint = (p1, q1), (p2, q2) # andere Punkte, nicht die Bounding Box
-                #exitPoint = (v1, f1), (v2, f2)
+            p1,p2,q1,q2 = dict["entryPlain"] 
+            v1,v2,f1,f2 = dict["exitPlain"] 
+            
+            '''  
+            '''
 
 
-                #check if its inside the entry or exit plain
-                '''
-                if x1 >= p1 and x2 <= p2 and y1 >= q1 and y2 <= q2: 
-                    # befindet sich im Entry Plain
-                    print("befindet sich im Entry Plain")
+            # ganz simpler Weg per internal queue: Alle Detectoin in der Entry werden dort hinzugefügt (aus der ExitQueue gelesen)
+            #: Alle Detections in der Exit werden aus der internalQueue gelesen und der ExitQueue hinzugefügt
 
-                    internalQueue.append({'id': id, 'feature': data_deque[id], 'label': names[id], 'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2}) 
+            internalQueue = []
+            entryQueue = dict["entryQueue"]
+            exitQueue = dict["exitQueue"]
 
 
-                    #if entryQueue is not None:
-                        #   entryQueue.get() 
-                        # momentan speicher ich nur das Feature Array und die ID
-                        # aber wenn ich hier das Speichern will, dann muss ich das alles speichern
-                            #die Koordinaten
-                            # die ID
-                            # Feature   Array
-                            # einfach das gannze Label speicerhn
-                            
-                        
+            # übergebne Liste wo kameraübergreifend die Identitäten + BILD (hier noch ResNet50 Array)gespeichert werden
+            features_dict = dict["list"]
+            
+            height, width, _ = img.shape  
+            neuId = 0
+            addIdToJsonFile = True 
 
-                    # hinzufügen einer Queue 
+            for key in list(data_deque):
+                if key not in identities:
+                    print("key not in identities deque" + str(key))
+                    '''
+                    if x1 >= v1 and x2 <= v2 and y1 >= f1 and y2 <= f2: 
+                        print("key insides Exit-Zone and can be removed")
+
+                    # DAS MACHT ÜBERHAUPT KEINEN SINN, DA ES JA KEINE DETECTOIN GIBT
+                    # ALSO WÄRE DAS NIEMALS WAHR
+
+                    #ICH MUSS DAS ENTWEDER ZULASSEN
+                    #ODER EINE NEUE LÖSUNG FINDEN,
+                    #WENN YOLO GUT GENUG IST, SOLLTE ES IMMMER DIE OBJEKTE IN DER EXIT-ZONE ENTDECKEN UND ES SOLLTE
+                    #JEDE IDENTITÄ GEPOPT WERDEN.
+
+                    #TODO:  ALSO DAS poppen hier entfernen und in der ExitZone hinzufügen.
+
+                    # hier das mit der ExitQueue und InternalQueue machen
+                    #nur dann ist es möglich, dass ein Objekt entfernt wird.
+                        data_deque.pop(key)
+                        exitQueue.append(key)
                     
+                    '''
+            for i, box in enumerate(bbox):
 
-                #if x1 >= v1 and x2 <= v2 and y1 >= f1 and y2 <= f2: 
-                    # befindet sich im Exit Plain
-
-                    #   if exitQueue is not None:
-                        # aus der eigenen Queue rausnehmene und in die ExitQueue hinzufügen
-                    #      exitQueue.append({'id': id, 'feature': data_deque[id], 'label': names[id], 'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2})                                         
-                    #hinzufügen der Queue für die nächste Kamera/Video
-                    #dequeue interene Queue
-                    # print("befindet sich im Exit Plain")
-                #entfernen des Elements aus der Queue / ich checke ja sowieso nur, ob es neue Elemente sind, also deque ich die gar nciht heir
-
-                internalQueue.get() 
-                '''
-                data_deque[id] = deque(maxlen= 256)
-
-                point1 = (x1, y1)
-                point2 = (x2, y2)
-
-                # Calculate the sub-image dimensions
-                sub_image_width = point2[0] - point1[0]
-                sub_image_height = point2[1] - point1[1]
-
-                # Extract the sub-image using array indexing
-                sub_image = np.zeros((sub_image_height, sub_image_width, 3), dtype=np.uint8)
-                for y in range(sub_image_height):
-                    for x in range(sub_image_width):
-                        sub_image[y, x] = img[point1[1]+y, point1[0]+x]
+                x1, y1, x2, y2 = [int(i) for i in box]
+                x1 += offset[0]
+                x2 += offset[0]
+                y1 += offset[1]
+                y2 += offset[1]
                 
-                reid = REID()   
-
-                #Durchführung der Re-Identification und Auslesen der Id
-                # oder hinzufügen der neuen ID mit Feature zum Dictionary
-
-                #Erstellung des Camera-Link-Mode
-
-                feature_bild = reid.extract_features(sub_image, id)
-
-                print("Länge der Featutes: " + str(len(features_dict)))
-
-                if len(features_dict) == 0:
-                    features_dict[0] = feature_bild
-                else:
-                    for fe, arr in features_dict.items():
-                        dist = reid.euclidian_distance(arr, feature_bild)
-                        print(dist)
-                        if dist < 0.3:
-                            neuId = fe
-                            addIdToJsonFile = False
-                            break
-                    else:
-                        features_dict[id] = feature_bild
-
-            if neuId != 0:
-                id = neuId  
-                
-            color = (255,255,255) #white/ 
+                # code to find center of bottom edge
+                center = (int((x2+x1)/ 2), int((y2+y2)/2))
             
-            if(addIdToJsonFile):
-                color = self.compute_color_for_labels(object_id[i]) 
+                # get ID of object
+                id = int(identities[i]) if identities is not None else 0
+                # checks if its a new ID
+                if id not in data_deque:  
+
+                    # DEFINITION der Entry und Exit Points und erst dann neue Elemente hinzufügen
+                    #check if its inside the entry or exit plain
+                    
+                    currentObject = None
+                    if x1 >= p1 and x2 <= p2 and y1 >= q1 and y2 <= q2: # Entry Plain
+                        # befindet sich im Entry Plain
+                        print("befindet sich im Entry Plain")
+
+
+                        if entryQueue is not None:
+                            currentObject = entryQueue.get() # nur das Bild ist gespeichert, wenn die nächste ID kommt, dann 
+                            #kann ich das abfragen, aber 
+                            #mehr Daten wären besser
+                            # der Trail, um die ganzen Koordinaten zu haben
+                            # und vielleciht ein zwei Bilder mehr
+                            internalQueue.put(currentObject)
+                        else:
+                            internalQueue.put(currentObject)
+
+                    if x1 >= v1 and x2 <= v2 and y1 >= f1 and y2 <= f2:  # Exit Plain
+                        
+                           if exitQueue is not None:
+                               currentObject = internalQueue.get() #Aus InternalQueue Bild lesen und ExitQueue hinzufügen
+                               exitQueue.put(currentObject)
+                           else:
+                               internalQueue.get()
+                               
+
+                    data_deque[id] = deque(maxlen= 256)
+
+                    point1 = (x1, y1)
+                    point2 = (x2, y2)
+
+                    # Calculate the sub-image dimensions
+                    sub_image_width = point2[0] - point1[0]
+                    sub_image_height = point2[1] - point1[1]
+
+                    # Extract the sub-image using array indexing
+                    sub_image = np.zeros((sub_image_height, sub_image_width, 3), dtype=np.uint8)
+                    for y in range(sub_image_height):
+                        for x in range(sub_image_width):
+                            sub_image[y, x] = img[point1[1]+y, point1[0]+x]
+                    
+                    reid = REID()   
+
+                    #Durchführung der Re-Identification und Auslesen der Id
+                    # oder hinzufügen der neuen ID mit Feature zum Dictionary
+
+                    #Erstellung des Camera-Link-Mode
+
+                    feature_bild = reid.extract_features(sub_image, id)
+
+                    #print("Länge der Featutes: " + str(len(features_dict)))
+
+                    if len(features_dict) == 0: # Frame 58, Exception
+                        features_dict[0] = feature_bild
+                    else:
+                        for fe, arr in features_dict.items():
+                            dist = reid.euclidian_distance(arr, feature_bild)
+                            print(dist)
+                            if dist < 0.3:
+                                neuId = fe
+                                addIdToJsonFile = False
+                                break
+                        else:
+                            features_dict[id] = feature_bild
+
+                if neuId != 0:
+                    id = neuId  
+                    
+                color = (255,255,255) #white/ 
                 
-            obj_name = names[object_id[i]]
-            label = '{}{:d}'.format("", id) + ":"+ '%s' % (obj_name)
+                if(addIdToJsonFile):
+                    color = self.compute_color_for_labels(object_id[i]) 
+                    
+                obj_name = names[object_id[i]]
+                label = '{}{:d}'.format("", id) + ":"+ '%s' % (obj_name)
 
-            # add center to buffer
-            data_deque[id].appendleft(center) 
+                # add center to buffer
+                data_deque[id].appendleft(center) 
 
-            self.UI_box(box, img, label=label, color=color, line_thickness=2)
-            # draw trail
-            for i in range(1, len(data_deque[id])):
+                self.UI_box(box, img, label=label, color=color, line_thickness=2)
+                # draw trail
+                for i in range(1, len(data_deque[id])):
 
-                # check if on buffer value is none
-                if data_deque[id][i - 1] is None or data_deque[id][i] is None:
-                    continue           
-                cv2.line(img, data_deque[id][i - 1], data_deque[id][i], color) #, thickness
+                    # check if on buffer value is none
+                    if data_deque[id][i - 1] is None or data_deque[id][i] is None:
+                        continue           
+                    cv2.line(img, data_deque[id][i - 1], data_deque[id][i], color) #, thickness
 
-                #image = img
-            '''
-            overlay = img.copy()
-            cv2.rectangle(overlay, (p1, q1), (p1+(p2-p1), q1+(q2-q1)), (0, 0, 255, 128), -1)
-            cv2.rectangle(overlay, (v1, f1), (v1+(v2-v1), f1+(f2-f1)), (0, 0, 255, 128), -1)
+                    #image = img
+                '''
+                overlay = img.copy()
+                cv2.rectangle(overlay, (p1, q1), (p1+(p2-p1), q1+(q2-q1)), (0, 0, 255, 128), -1)
+                cv2.rectangle(overlay, (v1, f1), (v1+(v2-v1), f1+(f2-f1)), (0, 0, 255, 128), -1)
 
-            alpha = 0.5
-            img = cv2.addWeighted(overlay, alpha, img, 1-alpha, 0)
+                alpha = 0.5
+                img = cv2.addWeighted(overlay, alpha, img, 1-alpha, 0)
 
-            print("x1: " + str(x1))
-            print("x2: " + str(x2))
-            print("y1: " + str(y1))
-            print("y2: " + str(y2))
-            '''
-#cv2.imshow('image', img)
-#cv2.waitKey(0)
-#cv2.destroyAllWindows()
-        
-        return img
+                print("x1: " + str(x1))
+                print("x2: " + str(x2))
+                print("y1: " + str(y1))
+                print("y2: " + str(y2))
+                '''
+
+
+
+            color = (255, 0, 0)  # blue
+            alpha = 0.5  # 50% transparency
+
+            mask = np.zeros_like(img)
+            cv2.rectangle(mask, (x1, y1), (x2, y2), (255, 255, 255), -1)
+            # Apply the mask to the image
+            img = cv2.addWeighted(mask, alpha, img, 1 - alpha, 0)
+
+
+            #Exit Plain
+            color = (0, 0, 255)  # red
+            alpha = 0.5  # 50% transparency
+
+            mask = np.zeros_like(img)
+            cv2.rectangle(mask, (x1, y1), (x2, y2), (255, 255, 255), -1)
+            # Apply the mask to the image
+            img = cv2.addWeighted(mask, alpha, img, 1 - alpha, 0)
+    #cv2.imshow('image', img)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+            
+            return img
