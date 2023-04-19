@@ -222,9 +222,6 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
                     features_dict[id] = (sub_image, 0, id)
                     #features_dict = {'id': id, 'feature': sub_image}
 
-
-        #if not addIdToJsonFile:
-         #   id = neuId  
              
         color = (0,0,0) #black/ 
         '''

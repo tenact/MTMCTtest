@@ -2,6 +2,7 @@
 
 import multiprocessing
 import os
+import networkx as nx
 import queue
 from sklearn.cluster import AgglomerativeClustering
 import hydra
@@ -12,7 +13,9 @@ from pathlib import Path
 from PIL import Image
 from reid import REID
 import json
-from neuda import Neudas
+#from neuda import Neudas: alte logig fürs CameralinkModel
+from cameraLinkLogikGraph import Neudas # neue Logik mit Graph
+
 
 import cv2
 import torch
@@ -49,6 +52,9 @@ queue1 = []
 queue2 = []
 queue3 = []
 queue4 = []
+
+graph = nx.Graph()
+
 
 dictionary_alleIDs = {}
 
@@ -237,7 +243,9 @@ class DetectionPredictor(BasePredictor):
 
 
             #hier nur das spezielle Objekt übergeben, Kamera 1  = 1 , Kamera 2 = 2, Zugriff über counter.
-            deepObject.draw_boxes(im0, bbox_xyxy, self.model.names, object_id, infos, identities)
+            timestamp = time.time()
+            print(graph)
+            deepObject.draw_boxes(im0, bbox_xyxy, self.model.names, object_id, timestamp, infos, identities)
 
             '''
             print( "das dict: " + str(self.infos[0]))
@@ -251,12 +259,12 @@ class DetectionPredictor(BasePredictor):
         return log_string
     
 
-lock = multiprocessing.Lock()
+#lock = multiprocessing.Lock()
 
 
 def process_video(video_path, cfg, counter, dictionary):
         
-        with lock:
+ #       with lock:
     
             print(f"Processing video: {video_path}")
             cfg.source = video_path
@@ -267,7 +275,7 @@ def process_video(video_path, cfg, counter, dictionary):
             else:
                 predictor = DetectionPredictor(cfg, counter=counter, dicionary=dictionary) # Initailizioerung des Predictors
             predictor()
-            pass
+  #          pass
 
 @hydra.main(version_base=None, config_path=str(DEFAULT_CONFIG.parent), config_name=DEFAULT_CONFIG.name)
 def predict(cfg):   
@@ -287,13 +295,17 @@ def predict(cfg):
     counter = 0
     manager = multiprocessing.Manager()
     shared_dict = manager.dict()
+
     for video_path in video_files:
         
         counter += 1
         processes = []
         print(counter)
 
-
+        #TODO: Hinzufügen des Kamera-Namens, sodass dieser im Graph gespeichert werden kann
+        
+        
+        
          #EntryPlain
         p1 = 50 # x value
         p2 = 1230 #x value
@@ -308,20 +320,23 @@ def predict(cfg):
         
         
 
-        entryQ = list(deque())
-        exitQ = list(deque())
+        entryQ = deque()
+        exitQ = deque()
         
         dicti2 = {}
         dicti = {}
         entryPLain = (p1,p2,q1,q2)
         exitPlain = (v1,v2,f1,f2)
+       # CameraLeftAxis = 1
+        #CameraRightAxis = 2
+
 
         #hinzufügen der ganzen Paramter, für das Camera Link-Model
 
         if counter == 1:
-            dicti[1] = {1: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict}}
+            dicti[1] = {1: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict, "camName": 1, "graph": graph}} #''', "cameraLeft": None, "cameraRight": 2'''
         elif counter == 2:
-            dicti2[2] = {2: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict}}
+            dicti2[2] = {2: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict , "camName": 2, "graph": graph}} #, "cameraLeft": 1, "cameraRight": None}
         else:
             dicti[counter] ={counter: {"entryPlain": entryPLain, "exitPlain": exitPlain, "entryQueue": entryQ, "exitQueue": exitQ, "list": shared_dict}}
 

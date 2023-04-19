@@ -84,7 +84,7 @@ class REID:
             features = resnet50(img_tensor.unsqueeze(0))
 
         bildSave = transforms.functional.to_pil_image(img_tensor)
-        bildSave.save(str(id) + "img.jpg")
+       # bildSave.save(str(id) + "img.jpg")
         #cropped_image = Image.fromarray(img)
 
         # Save the cropped image

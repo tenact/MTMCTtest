@@ -8,7 +8,10 @@ import argparse
 import time
 from pathlib import Path
 from PIL import Image
+from hieCluster import HIECLU
 from reid import REID
+
+#from reid_preTrained import REID
 import json
 import matplotlib.patches as patches
 
@@ -236,7 +239,9 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
           
                 
-
+            '''
+            using ReID-ResNET50 zur Extraktion
+            '''        
             point1 = (x1, y1)
             point2 = (x2, y2)
 
@@ -252,11 +257,22 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
             
             reid = REID()   
 
-            #Durchführung der Re-Identification und Auslesen der Id
-            # oder hinzufügen der neuen ID mit Feature zum Dictionary
+            
+            hieClu = HIECLU()
+
+            #feature_bild = reid.extract_features(sub_image, id)
 
             feature_bild = reid.extract_features(sub_image, id)
 
+            hieValue = hieClu.clustering_do(features_dict, feature_bild, id)
+
+            if hieValue == -1:
+                features_dict[id] = feature_bild
+            else:
+                id = hieValue
+                addIdToJsonFile = False    
+        
+            '''
             print("Länge der Featutes: " + str(len(features_dict)))
 
             if len(features_dict) == 0:
@@ -274,7 +290,9 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
         if neuId != 0:
             id = neuId  
-             
+            '''
+
+
         color = (255,255,255) #white/ 
         
         if(addIdToJsonFile):
