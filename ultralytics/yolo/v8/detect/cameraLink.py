@@ -296,10 +296,13 @@ def predict(cfg):
     manager = multiprocessing.Manager()
     shared_dict = manager.dict()
 
+
+    processes = []
+
+
     for video_path in video_files:
         
         counter += 1
-        processes = []
         print(counter)
 
         #TODO: Hinzufügen des Kamera-Namens, sodass dieser im Graph gespeichert werden kann
@@ -346,6 +349,8 @@ def predict(cfg):
         else:
             process = multiprocessing.Process(target=process_video, args=(video_path, cfg, counter, dicti2))
         processes.append(process)
+
+    for processes in processes:
         process.start()
 
     # Wait for all processes to finish
