@@ -34,7 +34,7 @@ from deep_sort_pytorch.utils.parser import get_config
 from deep_sort_pytorch.deep_sort import DeepSort
 from collections import deque
 import numpy as np
-from ultralytics.yolo.v8.detect.hardFeatures import SIFTFeatures
+#from ultralytics.yolo.v8.detect.hardFeatures import SIFTFeatures
 
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
 
