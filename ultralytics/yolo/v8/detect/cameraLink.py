@@ -1,5 +1,6 @@
 # Ultralytics YOLO 🚀, GPL-3.0 license
 
+
 import multiprocessing
 import os
 import networkx as nx
@@ -16,6 +17,7 @@ import json
 #from neuda import Neudas: alte logig fürs CameralinkModel
 from cameraLinkLogikGraph import Neudas # neue Logik mit Graph
 
+from multiprocessing import Pool
 
 import cv2
 import torch
@@ -350,7 +352,7 @@ def predict(cfg):
             process = multiprocessing.Process(target=process_video, args=(video_path, cfg, counter, dicti2))
         processes.append(process)
 
-    for processes in processes:
+    for process in processes:
         process.start()
 
     # Wait for all processes to finish
@@ -359,6 +361,5 @@ def predict(cfg):
 
 
 if __name__ == "__main__":
+    
     predict()
-
-
