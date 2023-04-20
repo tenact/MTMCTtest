@@ -124,6 +124,7 @@ class DetectionPredictor(BasePredictor):
             overrides (dict, optional): Configuration overrides. Defaults to None.
             queues (dict, optional): A dictionary of queues. Defaults to an empty dictionary.
         """
+        os.wait(1000)
 
         super().__init__(config, overrides)
         global deepObject
